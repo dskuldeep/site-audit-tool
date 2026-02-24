@@ -1,8 +1,13 @@
 """
 Core data models for the Site Audit Tool.
 All modules import from here; nothing else is cross-imported at this level.
+
+NOTE: `from __future__ import annotations` is intentionally omitted here.
+Python 3.13.0 has a regression (bpo-121814) where that import causes a crash
+in the dataclasses decorator when the module is not yet fully registered in
+sys.modules. Python 3.9+ supports generic aliases (list[str], dict[str, Any])
+natively, so the future import is unnecessary.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
