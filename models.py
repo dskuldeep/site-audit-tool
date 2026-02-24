@@ -183,6 +183,7 @@ class AuditConfig:
     respect_robots: bool = True
     check_external_links: bool = True
     follow_subdomains: bool = False
+    advanced_mode: bool = False
 
 
 # ── Top-level audit result ─────────────────────────────────────────────────────

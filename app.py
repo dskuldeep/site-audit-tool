@@ -131,6 +131,19 @@ def render_sidebar() -> AuditConfig | None:
         user_agent = USER_AGENT_PRESETS[ua_label]
         st.caption(f"`{user_agent}`")
 
+        advanced_mode = st.toggle(
+            "Advanced Mode",
+            value=False,
+            help=(
+                "Enables 40+ additional checks: URL structure quality, "
+                "content readability & keyword density, link quality, "
+                "server header analysis, image CLS hints, social/rich-result "
+                "tags, resource hints, trailing-slash consistency, and more."
+            ),
+        )
+        if advanced_mode:
+            st.caption("⚡ Advanced checks active — audit may take slightly longer.")
+
         st.divider()
 
         if _has_result():
@@ -163,6 +176,7 @@ def render_sidebar() -> AuditConfig | None:
             user_agent=user_agent,
             respect_robots=respect_robots,
             check_external_links=check_external,
+            advanced_mode=advanced_mode,
         )
 
     return None
@@ -224,7 +238,7 @@ def render_overview(result: AuditResult) -> None:
     col_gauge, col_stats = st.columns([1, 2])
 
     with col_gauge:
-        st.plotly_chart(health_score_gauge(result.health_score), use_container_width=True)
+        st.plotly_chart(health_score_gauge(result.health_score), width="stretch")
         label = score_label(result.health_score)
         color = score_color(result.health_score)
         st.markdown(
@@ -249,17 +263,17 @@ def render_overview(result: AuditResult) -> None:
     st.divider()
     c_left, c_right = st.columns(2)
     with c_left:
-        st.plotly_chart(issues_by_category_bar(issues), use_container_width=True)
+        st.plotly_chart(issues_by_category_bar(issues), width="stretch")
     with c_right:
-        st.plotly_chart(issues_by_severity_donut(issues), use_container_width=True)
+        st.plotly_chart(issues_by_severity_donut(issues), width="stretch")
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.plotly_chart(response_time_histogram(pages), use_container_width=True)
+        st.plotly_chart(response_time_histogram(pages), width="stretch")
     with c2:
-        st.plotly_chart(page_size_histogram(pages), use_container_width=True)
+        st.plotly_chart(page_size_histogram(pages), width="stretch")
     with c3:
-        st.plotly_chart(status_code_bar(pages), use_container_width=True)
+        st.plotly_chart(status_code_bar(pages), width="stretch")
 
     # ── Top 20 critical issues ──────────────────────────────────────────────
     st.divider()
@@ -273,7 +287,7 @@ def render_overview(result: AuditResult) -> None:
     # ── Crawl depth ─────────────────────────────────────────────────────────
     st.divider()
     st.subheader("Crawl Depth")
-    st.plotly_chart(crawl_depth_bar(pages), use_container_width=True)
+    st.plotly_chart(crawl_depth_bar(pages), width="stretch")
 
 
 # ── Dashboard: Issues by Category ─────────────────────────────────────────────
@@ -386,7 +400,7 @@ def render_pages(result: AuditResult) -> None:
 
     st.dataframe(
         filtered[["URL", "Status", "Title", "Word Count", "Response (ms)", "Size (KB)", "Issues", "Depth", "Indexable"]],
-        use_container_width=True,
+        width="stretch",
         height=500,
         column_config={
             "URL":           st.column_config.TextColumn("URL", width="large"),
@@ -430,7 +444,7 @@ def render_crawlability(result: AuditResult) -> None:
             if rd.disallow_rules:
                 with st.expander(f"Disallow rules ({len(rd.disallow_rules)})"):
                     rows = pd.DataFrame(rd.disallow_rules)
-                    st.dataframe(rows, use_container_width=True)
+                    st.dataframe(rows, width="stretch")
         else:
             st.warning("robots.txt was not checked.")
 
@@ -502,7 +516,7 @@ def render_export(result: AuditResult) -> None:
     st.subheader("All Issues Table")
     df_issues_full = issues_to_df(result.issues)
     if not df_issues_full.empty:
-        st.dataframe(df_issues_full, use_container_width=True, height=600)
+        st.dataframe(df_issues_full, width="stretch", height=600)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -544,11 +558,11 @@ def _render_issue_table(issues: list[Issue]) -> None:
         c = colors.get(val, "#888")
         return f"color: {c}; font-weight: bold"
 
-    styled = df.style.applymap(_sev_style, subset=["Sev"])
+    styled = df.style.map(_sev_style, subset=["Sev"])
 
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         height=min(600, len(df) * 36 + 60),
         column_config={
             "Sev":         st.column_config.TextColumn("Severity", width="small"),

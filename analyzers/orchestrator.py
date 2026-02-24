@@ -18,6 +18,19 @@ from analyzers.security import SecurityAnalyzer
 from analyzers.http_issues import HTTPIssuesAnalyzer
 from analyzers.sitemap_analyzer import SitemapAnalyzer
 from analyzers.robots_analyzer import RobotsAnalyzer
+from analyzers.advanced import (
+    URLStructureAnalyzer,
+    ContentQualityAnalyzer,
+    LinkQualityAnalyzer,
+    TechnicalEnhancedAnalyzer,
+    ServerHeaderAnalyzer,
+    ImageEnhancedAnalyzer,
+    SocialRichResultsAnalyzer,
+    ResourceHintsAnalyzer,
+    run_trailing_slash_checks,
+    run_noindex_link_checks,
+    run_www_consistency_checks,
+)
 
 
 # Per-page analyzers (run for each crawled page)
@@ -30,6 +43,17 @@ _PER_PAGE_ANALYZERS = [
     PerformanceAnalyzer(),
     SecurityAnalyzer(),
     HTTPIssuesAnalyzer(),
+]
+
+_ADVANCED_PER_PAGE_ANALYZERS = [
+    URLStructureAnalyzer(),
+    ContentQualityAnalyzer(),
+    LinkQualityAnalyzer(),
+    TechnicalEnhancedAnalyzer(),
+    ServerHeaderAnalyzer(),
+    ImageEnhancedAnalyzer(),
+    SocialRichResultsAnalyzer(),
+    ResourceHintsAnalyzer(),
 ]
 
 
@@ -49,12 +73,14 @@ def run_all_analyzers(
     _emit(progress_callback, f"Analysing {total} pages…", 0)
 
     # ── Per-page analysis ──────────────────────────────────────────────────────
+    per_page = _PER_PAGE_ANALYZERS + (_ADVANCED_PER_PAGE_ANALYZERS if config.advanced_mode else [])
+
     for idx, (url, page) in enumerate(all_pages.items()):
-        for analyzer in _PER_PAGE_ANALYZERS:
+        for analyzer in per_page:
             try:
                 found = analyzer.analyze(page, all_pages, config)
                 issues.extend(found)
-            except Exception as exc:
+            except Exception:
                 # Never let one analyzer crash the whole audit
                 pass
 
@@ -104,6 +130,16 @@ def run_all_analyzers(
             issues.extend(robots_issues)
     except Exception:
         pass
+
+    # ── Advanced cross-page checks ─────────────────────────────────────────────
+    if config.advanced_mode:
+        _emit(progress_callback, "Running advanced cross-page checks…", 92)
+
+        for batch_fn in (run_trailing_slash_checks, run_noindex_link_checks, run_www_consistency_checks):
+            try:
+                issues.extend(batch_fn(all_pages, config))
+            except Exception:
+                pass
 
     _emit(progress_callback, "Scoring…", 95)
 
